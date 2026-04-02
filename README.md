@@ -148,8 +148,146 @@ In ROS2's publish-subscribe pattern, nodes communicate through named topics with
 
 ---
 
+---
+
+## Exercise 2: ROS2 Topic Inspection & Message Frequency Analysis
+
+### (a) ROS2 CLI Topic Commands
+
+#### Commands Used
+
+```bash
+ros2 topic list
+ros2 topic info /cmd_vel
+ros2 topic info /odom
+ros2 topic hz /odom
+ros2 topic bw /odom
+ros2 node list
+ros2 node info /circle_motion
+```
+
+#### Screenshot: `ros2 topic list` — All Active Topics
+
+![ros2 topic list](screenshots/ex2_1a_topic_list.png)
+
+```
+/clock
+/cmd_vel
+/imu
+/joint_states
+/odom
+/parameter_events
+/performance_metrics
+/robot_description
+/rosout
+/scan
+/tf
+/tf_static
+```
+
+#### Screenshot: `ros2 topic info /cmd_vel` — Publishers & Subscribers
+
+![ros2 topic info /cmd_vel](screenshots/ex2_1a_topic_info_cmd_vel.png)
+
+```
+Type: geometry_msgs/msg/Twist
+Publisher count: 1
+Subscription count: 1
+```
+
+#### Screenshot: `ros2 topic info /odom`
+
+![ros2 topic info /odom](screenshots/ex2_1a_topic_info_odom.png)
+
+```
+Type: nav_msgs/msg/Odometry
+Publisher count: 1
+Subscription count: 1
+```
+
+#### Screenshot: `ros2 topic hz /odom` — Message Frequency
+
+![ros2 topic hz /odom](screenshots/ex2_1a_topic_hz_odom.png)
+
+```
+average rate: 29.353
+        min: 0.028s max: 0.042s std dev: 0.00200s window: 300
+```
+
+#### Screenshot: `ros2 topic bw /odom` — Bandwidth
+
+![ros2 topic bw /odom](screenshots/ex2_1a_topic_bw_odom.png)
+
+```
+21.32 KB/s from 29 messages
+        Message size mean: 0.72 KB min: 0.72 KB max: 0.72 KB
+```
+
+#### Screenshot: `ros2 node list` — All Nodes
+
+![ros2 node list](screenshots/ex2_1a_node_list.png)
+
+```
+/circle_motion
+/gazebo
+/odom_monitor
+/robot_state_publisher
+/turtlebot3_diff_drive
+/turtlebot3_imu
+/turtlebot3_joint_state
+/turtlebot3_laserscan
+```
+
+#### Screenshot: `ros2 node info /circle_motion`
+
+![ros2 node info /circle_motion](screenshots/ex2_1a_info_circle_motion.png)
+
+```
+/circle_motion
+  Subscribers:
+
+  Publishers:
+    /cmd_vel: geometry_msgs/msg/Twist
+    /parameter_events: rcl_interfaces/msg/ParameterEvent
+    /rosout: rcl_interfaces/msg/Log
+  Service Servers:
+    /circle_motion/describe_parameters: rcl_interfaces/srv/DescribeParameters
+    /circle_motion/get_parameter_types: rcl_interfaces/srv/GetParameterTypes
+    /circle_motion/get_parameters: rcl_interfaces/srv/GetParameters
+    /circle_motion/list_parameters: rcl_interfaces/srv/ListParameters
+    /circle_motion/set_parameters: rcl_interfaces/srv/SetParameters
+    /circle_motion/set_parameters_atomically: rcl_interfaces/srv/SetParametersAtomically
+  Service Clients:
+
+  Action Servers:
+
+  Action Clients:
+```
+
+---
+
+### Answers
+
+#### What is the `/odom` frequency? Why does frequency matter for robot control?
+
+The `/odom` topic publishes at approximately **29.3 Hz** (about 30 times per second), as measured by `ros2 topic hz /odom`. Frequency matters for robot control because a higher update rate provides more timely and accurate state information, allowing control algorithms to make finer corrections and respond faster to changes in the environment. If the frequency is too low, the robot may overshoot targets or react too slowly to obstacles, leading to unstable or unsafe behavior.
+
+#### How many publishers and subscribers does `/cmd_vel` have? List them.
+
+When both custom nodes are running, `/cmd_vel` has **1 publisher** and **1 subscriber**:
+
+- **Publisher (1):** `/circle_motion` — publishes `geometry_msgs/msg/Twist` messages with linear velocity 0.3 m/s and angular velocity 0.5 rad/s
+- **Subscriber (1):** `/turtlebot3_diff_drive` — the Gazebo differential drive plugin that receives velocity commands and moves the simulated robot
+
+#### What's the difference between `ros2 topic hz` and `ros2 topic bw`?
+
+`ros2 topic hz` measures the **message publishing rate** (frequency in Hz), telling you how often messages are being sent on a topic — for example, `/odom` publishes at ~29.3 Hz. `ros2 topic bw` measures the **bandwidth** (data throughput in KB/s or MB/s), telling you how much data is flowing through the topic per second — for example, `/odom` uses ~21.3 KB/s with each message being 0.72 KB.
+
+---
+
 ### Issues Encountered
 
+- **Space in topic name:** Running `ros2 topic info / cmd_vel` (with a space after `/`) caused an error; the correct syntax is `ros2 topic info /cmd_vel` with no space.
 - **Dependencies placement in `package.xml`:** The `<depend>` tags for `rclpy`, `geometry_msgs`, and `nav_msgs` were initially placed inside the `<export>` block. They should ideally be placed before the `<export>` section, though ROS2 still resolves them correctly in either location.
 
 ---
