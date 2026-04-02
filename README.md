@@ -1,5 +1,159 @@
 # Lecture 6: ROS 2 Concepts & Building Software Packages
 
+---
+
+## Submission Details
+
+- **GitHub Repository:** https://github.com/rkaushik97/lecture6-ros2demo
+- **Name:** Kaushik Raghupathruni
+- **Student ID:** 23216666
+- **ROS2 Version:** ROS2 Humble Hawksbill
+
+---
+
+## Exercise 1: Create ROS2 Package & Publisher-Subscriber Nodes
+
+### (a) Package Creation & Circle Motion Publisher
+
+#### Commands Used
+
+```bash
+# Create the package
+cd /workspace/turtlebot3_ws/src
+ros2 pkg create --build-type ament_python student_robotics
+
+# Add dependencies to package.xml (rclpy, geometry_msgs, nav_msgs)
+# Register entry points in setup.py
+
+# Build the package
+cd /workspace/turtlebot3_ws
+colcon build --packages-select student_robotics
+source install/setup.bash
+
+# Launch TurtleBot3 in Gazebo (Terminal 1)
+tb3_empty
+
+# Run the circle motion node (Terminal 2)
+ros2 run student_robotics circle_motion
+```
+
+#### Package Structure
+
+![Package tree structure](screenshots/ex1_1a_tree_structure.png)
+
+#### Python Code: `circle_motion.py`
+
+```python
+#!/usr/bin/env python3
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Twist
+
+
+class CircleMotion(Node):
+    def __init__(self):
+        super().__init__('circle_motion')
+        self.publisher = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.timer = self.create_timer(0.1, self.publish_velocity)  # 10 Hz = 0.1s
+        self.get_logger().info('Circle Motion node started. Publishing to /cmd_vel')
+
+    def publish_velocity(self):
+        msg = Twist()
+        msg.linear.x = 0.3    # 0.3 m/s forward
+        msg.angular.z = 0.5   # 0.5 rad/s turning left
+        self.publisher.publish(msg)
+        self.get_logger().info(
+            f'Publishing: linear.x={msg.linear.x}, angular.z={msg.angular.z}'
+        )
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = CircleMotion()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+#### Screenshot: Robot Moving in Circles in Gazebo
+
+![Robot moving in circles in Gazebo](screenshots/ex1_1a_circle_motion.png)
+
+#### Why use `create_timer()`?
+
+`create_timer()` is used to repeatedly call the velocity publishing callback at a fixed frequency (10 Hz in this case), ensuring the robot receives continuous and consistent motion commands. Without a timer, the node would publish only once and the robot would stop moving after the command expires, since ROS2 velocity commands are not latched and need to be sent continuously.
+
+---
+
+### (b) Odometry Subscriber
+
+#### Python Code: `odom_monitor.py`
+
+```python
+#!/usr/bin/env python3
+import rclpy
+from rclpy.node import Node
+from nav_msgs.msg import Odometry
+
+
+class OdomMonitor(Node):
+    def __init__(self):
+        super().__init__('odom_monitor')
+        self.subscription = self.create_subscription(
+            Odometry,
+            '/odom',
+            self.odom_callback,
+            10
+        )
+        self.get_logger().info('Odom Monitor node started. Subscribing to /odom')
+
+    def odom_callback(self, msg):
+        x = msg.pose.pose.position.x
+        y = msg.pose.pose.position.y
+        vx = msg.twist.twist.linear.x
+        vz = msg.twist.twist.angular.z
+        self.get_logger().info(
+            f'Position: x={x:.3f}, y={y:.3f} | '
+            f'Velocity: linear.x={vx:.3f}, angular.z={vz:.3f}'
+        )
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = OdomMonitor()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+#### Screenshot: Both Nodes Running Simultaneously
+
+![Both circle_motion and odom_monitor nodes running](screenshots/ex1_1b_circle_odo_nodes.png)
+
+#### Screenshot: `ros2 node list` Showing Both Nodes
+
+![ros2 node list output](screenshots/ex1_1b_ros_2_nodes_list.png)
+
+#### How does pub-sub decoupling work?
+
+In ROS2's publish-subscribe pattern, nodes communicate through named topics without any direct knowledge of each other — the publisher simply sends messages to a topic, and any number of subscribers can independently listen to that same topic. This decoupling means that the `circle_motion` publisher does not need to know that `odom_monitor` (or any other node) exists; it just publishes `Twist` messages to `/cmd_vel`, while the Gazebo simulation subscribes to that topic and publishes odometry data to `/odom` independently. This architecture makes the system modular and flexible — nodes can be added, removed, or replaced without modifying other nodes, as long as they agree on the topic name and message type.
+
+---
+
+### Issues Encountered
+
+- **Dependencies placement in `package.xml`:** The `<depend>` tags for `rclpy`, `geometry_msgs`, and `nav_msgs` were initially placed inside the `<export>` block. They should ideally be placed before the `<export>` section, though ROS2 still resolves them correctly in either location.
+
+---
+
 
 https://github.com/user-attachments/assets/8124b78b-d82c-4339-b1e3-97d4fc210e88
 
