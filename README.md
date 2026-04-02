@@ -285,6 +285,28 @@ When both custom nodes are running, `/cmd_vel` has **1 publisher** and **1 subsc
 
 ---
 
+### (b) Visualize Communication Graph
+
+#### Command Used
+
+```bash
+rqt_graph
+```
+
+#### Screenshot: `rqt_graph` — Node Communication Graph
+
+![rqt_graph showing node communication](screenshots/ex2_1b_rqt_graph.png)
+
+#### What does the graph show? How are nodes connected?
+
+The rqt_graph visualizes the ROS2 computation graph, showing all active nodes (ovals) and the topics (rectangles) through which they communicate via directed arrows. The key communication chain is: `/circle_motion` publishes to `/cmd_vel`, which is subscribed to by `/turtlebot3_diff_drive`; this drive plugin then publishes odometry data to `/odom`, which `/odom_monitor` subscribes to. Additionally, the graph shows other Gazebo-related nodes such as `/turtlebot3_joint_state` publishing to `/joint_states` (consumed by `/robot_state_publisher`), and standalone sensor nodes like `/turtlebot3_imu`, `/turtlebot3_laserscan`, and `/gazebo`.
+
+#### What happens if you stop the `circle_motion` node? Does `odom_monitor` still work? Why?
+
+If the `circle_motion` node is stopped, the robot stops receiving velocity commands on `/cmd_vel` and gradually comes to a halt, but `odom_monitor` continues to work and receive messages on `/odom` because the Gazebo simulation still publishes odometry data regardless of whether the robot is moving. This is because of pub-sub decoupling — `odom_monitor` subscribes directly to `/odom` published by `/turtlebot3_diff_drive`, and has no dependency on `/circle_motion` whatsoever.
+
+---
+
 ### Issues Encountered
 
 - **Space in topic name:** Running `ros2 topic info / cmd_vel` (with a space after `/`) caused an error; the correct syntax is `ros2 topic info /cmd_vel` with no space.
